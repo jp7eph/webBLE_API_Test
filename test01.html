@@ -30,12 +30,12 @@ function connect() {
   let options = {};
 
   //options.acceptAllDevices = true;
-  options.filters = [
-    {services: [LED_SERVICE_UUID]}
+//   options.filters = [
+//     {services: [LED_SERVICE_UUID]}
 //     {namePrefix: "BBC micro:bit"}
-  ];
+//   ];
 
-  navigator.bluetooth.requestDevice(options)
+  navigator.bluetooth.requestDevice({acceptAllDevices:true})
   .then(device => {
     bluetoothDevice = device;
     console.log("device", device);
