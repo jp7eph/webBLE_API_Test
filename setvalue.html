@@ -14,16 +14,19 @@
       </h1>
       <div class="buttons">
         <button class="button is-success is-light" type="button" onclick="onReadButtonClick()">接続</button>
+        <button class="button is-danger is-light" type="button" onclick="onDisconnectButtonClick()">切断</button>
         <button class="button is-info is-light" type="button" onclick="onWriteButtonClick()">書き込み</button>
+        <input class="input" id="message"/>
       </div>
     </div>
+
 </section>
 
 <script>
 const TOIO_SERVICE_UUID          = '8b5e5d80-d449-4e65-b2d6-a382bae876b0';
 const LIGHT_CHARACTERISTICS_UUID = '8b5e5d81-d449-4e65-b2d6-a382bae876b1';
-const light_buf = new Uint8Array([ 0x48, 0x69 ]);
 
+let device;
 let myDescriptor;
 let characteristic;
 
@@ -31,10 +34,13 @@ async function onReadButtonClick() {
   let serviceUuid = TOIO_SERVICE_UUID;
   let characteristicUuid = LIGHT_CHARACTERISTICS_UUID;
 
+  device = null;
+
   try {
     console.log('Requesting Bluetooth Device...');
-    const device = await navigator.bluetooth.requestDevice({
+    device = await navigator.bluetooth.requestDevice({
         filters: [{services: [serviceUuid]}]});
+    device.addEventListener('gattserverdisconnected', onDisconnected);
     console.log('Connecting to GATT Server...');
     const server = await device.gatt.connect();
     console.log('Getting Service...');
@@ -42,23 +48,36 @@ async function onReadButtonClick() {
     console.log('Getting Characteristic...');
     characteristic = await service.getCharacteristic(characteristicUuid);
 
-    console.log('Getting Descriptor...');
-    myDescriptor = await characteristic.getDescriptor('gatt.characteristic_user_description');
-    const value = await myDescriptor.readValue();
-    let decoder = new TextDecoder('utf-8');
-    console.log('> Characteristic User Description: ' + decoder.decode(value));
   } catch(error) {
     console.log('Argh! ' + error);
   }
+}
+
+function onDisconnectButtonClick() {
+  if (!device) {
+    return;
+  }
+  console.log('Disconnecting from Bluetooth Device...');
+  if (device.gatt.connected) {
+    device.gatt.disconnect();
+  } else {
+    console.log('Bluetooth Device is already disconnected');
+  }
+}
+
+function onDisconnected(event) {
+  // Object event.target is Bluetooth Device getting disconnected.
+  console.log('Bluetooth Device disconnected');
 }
 
 async function onWriteButtonClick() {
   if (!characteristic) {
     return;
   }
-  let value = light_buf;
+  var text = document.querySelector("#message").value;
+  var arrayBuffer = new TextEncoder().encode(text);
   try {
-    await characteristic.writeValue(value);
+    await characteristic.writeValue(arrayBuffer);
   } catch(error) {
     console.log('Argh! ' + error);
   }

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Web Bluetooth API で書き込み</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css">
+</head>
+<body>
+  <section class="section">
+    <div class="container">
+      <h1 class="title">
+        WebBLE API Test
+      </h1>
+      <h2 class="subtitle">接続・切断</h2>
+      <div class="buttons">
+        <button class="button is-success is-light" type="button" onclick="onConnectButtonClick()">接続</button>
+        <button class="button is-danger is-light" type="button" onclick="onDisconnectButtonClick()">切断</button>
+      </div>
+      <div class="columns">
+        <div class="column">
+          <h2 class="subtitle">ロック状態(R) (8b5e5d81-d449-4e65-b2d6-a382bae876b0)</h2>
+          <button class="button is-light" type="button" value="8b5e5d81-d449-4e65-b2d6-a382bae876b0" onclick="onReadButtonClick(this.value)">読み込み</button>
+        </div>
+        <div class="column">
+          <h2 class="subtitle">コマンド送信(R/W) (8b5e5d81-d449-4e65-b2d6-a382bae876b1)</h2>
+          <input class="input" id="message"/>
+          <button class="button is-light" type="button" value="8b5e5d81-d449-4e65-b2d6-a382bae876b1" onclick="onWriteButtonClick(this.value)">書き込み</button>
+          <button class="button is-light" type="button" value="8b5e5d81-d449-4e65-b2d6-a382bae876b1" onclick="onReadButtonClick(this.value)">読み込み</button>
+        </div>
+      </div>
+    </div>
+
+</section>
+
+<script>
+const SERVICE_UUID                    = '8b5e5d80-d449-4e65-b2d6-a382bae876b0';
+// const CHARACTERISTICS_UUID_LOCK_STATE = '8b5e5d81-d449-4e65-b2d6-a382bae876b0';
+// const CHARACTERISTICS_UUID_CMD        = '8b5e5d81-d449-4e65-b2d6-a382bae876b1';
+
+let device;
+// let myDescriptor;
+// let characteristics;
+
+async function onConnectButtonClick() {
+  let serviceUuid = SERVICE_UUID;
+  // let characteristicUuidCmd = CHARACTERISTICS_UUID_CMD;
+
+  device = null;
+
+  try {
+    console.log('Requesting Bluetooth Device...');
+    device = await navigator.bluetooth.requestDevice({
+        filters: [{services: [serviceUuid]}]});
+    device.addEventListener('gattserverdisconnected', onDisconnected);
+    console.log('Connecting to GATT Server...');
+    const server = await device.gatt.connect();
+    console.log('Getting Service...');
+    const service = await server.getPrimaryService(serviceUuid);
+    console.log('Getting Characteristic...');
+    characteristics = await service.getCharacteristics();
+
+  } catch(error) {
+    console.log('Argh! ' + error);
+  }
+}
+
+function onDisconnectButtonClick() {
+  if (!device) {
+    return;
+  }
+  console.log('Disconnecting from Bluetooth Device...');
+  if (device.gatt.connected) {
+    device.gatt.disconnect();
+  } else {
+    console.log('Bluetooth Device is already disconnected');
+  }
+}
+
+function onDisconnected(event) {
+  // Object event.target is Bluetooth Device getting disconnected.
+  console.log('Bluetooth Device disconnected');
+}
+
+// onReadButtonClick(readUuid)
+// args: 
+//    readUuid: 読み込みたいcharacteristicのUUID
+async function onReadButtonClick(readUuid) {
+  var characteristicRead = characteristics.find(element => element.uuid === readUuid);
+  if (characteristicRead) {
+    try {
+      console.log('Reading ...');
+      // NOTE: 非同期処理だから？.thenの中でデコード処理をする
+      await characteristicRead.readValue().then(value => {
+        console.log('> ' + new TextDecoder().decode(value));
+      })
+    } catch(error) {
+      console.log('Argh! ' + error);
+    }
+  }
+}
+
+// onWriteButtonClick(writeUuid)
+// args: 
+//    writeUuid: 書き込みたいcharacteristicのUUID
+async function onWriteButtonClick(writeUuid) {
+  var characteristicWrite = characteristics.find(element => element.uuid === writeUuid);
+  if (!characteristicWrite) {
+    return;
+  }
+  var text = document.querySelector("#message").value;
+  var arrayBuffer = new TextEncoder().encode(text);
+  try {
+    await characteristicWrite.writeValue(arrayBuffer);
+  } catch(error) {
+    console.log('Argh! ' + error);
+  }
+}
+
+</script>
+</body>
+</html>
