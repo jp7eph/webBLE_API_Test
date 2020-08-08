@@ -20,13 +20,15 @@
       <div class="columns">
         <div class="column">
           <h2 class="subtitle">ロック状態(R) (8b5e5d81-d449-4e65-b2d6-a382bae876b0)</h2>
-          <button class="button is-light" type="button" value="8b5e5d81-d449-4e65-b2d6-a382bae876b0" onclick="onReadButtonClick(this.value)">読み込み</button>
+          <button class="button is-info is-light" type="button" value="8b5e5d81-d449-4e65-b2d6-a382bae876b0" onclick="onReadButtonClick(this.value, document.querySelector('#lockStateText'))">読み込み</button>
+          <textarea class="textarea" disabled id="lockStateText"></textarea>
         </div>
         <div class="column">
           <h2 class="subtitle">コマンド送信(R/W) (8b5e5d81-d449-4e65-b2d6-a382bae876b1)</h2>
-          <input class="input" id="message"/>
-          <button class="button is-light" type="button" value="8b5e5d81-d449-4e65-b2d6-a382bae876b1" onclick="onWriteButtonClick(this.value)">書き込み</button>
-          <button class="button is-light" type="button" value="8b5e5d81-d449-4e65-b2d6-a382bae876b1" onclick="onReadButtonClick(this.value)">読み込み</button>
+          <input class="input" id="cmdMessage"/>
+          <button class="button is-light" type="button" value="8b5e5d81-d449-4e65-b2d6-a382bae876b1" onclick="onWriteButtonClick(this.value,document.querySelector('#cmdMessage').value)">書き込み</button>
+          <button class="button is-info is-light" type="button" value="8b5e5d81-d449-4e65-b2d6-a382bae876b1" onclick="onReadButtonClick(this.value, document.querySelector('#cmdText'))">読み込み</button>
+          <textarea class="textarea" disabled id="cmdText"></textarea>
         </div>
       </div>
     </div>
@@ -39,12 +41,9 @@ const SERVICE_UUID                    = '8b5e5d80-d449-4e65-b2d6-a382bae876b0';
 // const CHARACTERISTICS_UUID_CMD        = '8b5e5d81-d449-4e65-b2d6-a382bae876b1';
 
 let device;
-// let myDescriptor;
-// let characteristics;
 
 async function onConnectButtonClick() {
   let serviceUuid = SERVICE_UUID;
-  // let characteristicUuidCmd = CHARACTERISTICS_UUID_CMD;
 
   device = null;
 
@@ -85,14 +84,20 @@ function onDisconnected(event) {
 // onReadButtonClick(readUuid)
 // args: 
 //    readUuid: 読み込みたいcharacteristicのUUID
-async function onReadButtonClick(readUuid) {
+//    returnTextArea: 読み込んだ値を返すTextArea。引数が無ければConsole.logに出力。
+async function onReadButtonClick(readUuid, returnTextArea) {
   var characteristicRead = characteristics.find(element => element.uuid === readUuid);
   if (characteristicRead) {
     try {
       console.log('Reading ...');
       // NOTE: 非同期処理だから？.thenの中でデコード処理をする
       await characteristicRead.readValue().then(value => {
-        console.log('> ' + new TextDecoder().decode(value));
+        var decodeStr = new TextDecoder().decode(value);
+        if(returnTextArea){
+          returnTextArea.value = decodeStr;
+        } else {
+          console.log('> ' + decodeStr);
+        }
       })
     } catch(error) {
       console.log('Argh! ' + error);
@@ -100,21 +105,25 @@ async function onReadButtonClick(readUuid) {
   }
 }
 
-// onWriteButtonClick(writeUuid)
+// onWriteButtonClick(writeUuid, writeBody)
 // args: 
 //    writeUuid: 書き込みたいcharacteristicのUUID
-async function onWriteButtonClick(writeUuid) {
+//    writeBody: 書き込む内容
+async function onWriteButtonClick(writeUuid, writeBody) {
   var characteristicWrite = characteristics.find(element => element.uuid === writeUuid);
   if (!characteristicWrite) {
     return;
   }
-  var text = document.querySelector("#message").value;
-  var arrayBuffer = new TextEncoder().encode(text);
+  var arrayBuffer = new TextEncoder().encode(writeBody);
   try {
     await characteristicWrite.writeValue(arrayBuffer);
   } catch(error) {
     console.log('Argh! ' + error);
   }
+}
+
+function onHashButtonClick() {
+
 }
 
 </script>
